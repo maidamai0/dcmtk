@@ -289,7 +289,7 @@ OFCondition DcmQueryRetrieveMoveContext::buildSubAssociation(T_DIMSE_C_MoveRQ *r
     DIC_NODENAME dstHostName;
     DIC_NODENAME dstHostNamePlusPort;
     int dstPortNumber;
-    T_ASC_Parameters *params;
+    T_ASC_Parameters *params = NULL;
     OFString temp_str;
 
     OFStandard::strlcpy(dstAETitle, request->MoveDestination, DIC_AE_LEN + 1);
@@ -698,7 +698,7 @@ OFCondition DcmQueryRetrieveMoveContext::addAllStoragePresentationContexts(T_ASC
 
     for (i = 0; i < numberOfDcmLongSCUStorageSOPClassUIDs && cond.good(); i++) {
         cond = ASC_addPresentationContext(
-            params, pid, dcmLongSCUStorageSOPClassUIDs[i],
+            params, OFstatic_cast(T_ASC_PresentationContextID, pid), dcmLongSCUStorageSOPClassUIDs[i],
             transferSyntaxes, numTransferSyntaxes);
         pid += 2;   /* only odd presentation context id's */
     }

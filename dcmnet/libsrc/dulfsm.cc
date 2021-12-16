@@ -105,7 +105,7 @@ END_EXTERN_C
 #include "dcmtk/dcmnet/lst.h"
 #include "dcmtk/dcmnet/cond.h"
 #include "dcmtk/dcmnet/dul.h"
-#include "dulstruc.h"
+#include "dcmtk/dcmnet/dulstruc.h"
 #include "dulpriv.h"
 #include "dulfsm.h"
 #include "dcmtk/ofstd/ofbmanip.h"
@@ -114,6 +114,7 @@ END_EXTERN_C
 #include "dcmtk/dcmnet/dcmtrans.h"
 #include "dcmtk/dcmnet/dcmlayer.h"
 #include "dcmtk/dcmnet/diutil.h"
+#include "dcmtk/dcmnet/helpers.h"
 #include "dcmtk/ofstd/ofsockad.h" /* for class OFSockAddr */
 #include <ctime>
 
@@ -303,9 +304,6 @@ findPresentationCtx(LST_HEAD ** lst, DUL_PRESENTATIONCONTEXTID contextID);
 
 PRV_SCUSCPROLE *
 findSCUSCPRole(LST_HEAD ** lst, char *abstractSyntax);
-
-void destroyPresentationContextList(LST_HEAD ** l);
-void destroyUserInformationLists(DUL_USERINFO * userInfo);
 
 static volatile FSM_Event_Description Event_Table[] = {
     {A_ASSOCIATE_REQ_LOCAL_USER, "A-ASSOCIATE request (local user)"},
@@ -1015,7 +1013,7 @@ AE_3_AssociateConfirmationAccept(PRIVATE_NETWORKKEY ** /*network*/,
 
         }
 
-        destroyPresentationContextList(&assoc.presentationContextList);
+        destroyAssociatePDUPresentationContextList(&assoc.presentationContextList);
         destroyUserInformationLists(&assoc.userInfo);
         service->peerMaxPDU = assoc.userInfo.maxLength.maxLength;
         (*association)->maxPDV = assoc.userInfo.maxLength.maxLength;
@@ -1232,7 +1230,7 @@ AE_6_ExamineAssociateRequest(PRIVATE_NETWORKKEY ** /*network*/,
                assoc.userInfo.implementationVersionName.data, 16 + 1);
         (*association)->associationState = DUL_ASSOC_ESTABLISHED;
 
-        destroyPresentationContextList(&assoc.presentationContextList);
+        destroyAssociatePDUPresentationContextList(&assoc.presentationContextList);
         destroyUserInformationLists(&assoc.userInfo);
 
         /* If this PDU is ok with us */
@@ -2260,7 +2258,7 @@ requestAssociationTCP(PRIVATE_NETWORKKEY ** network,
           return makeDcmnetCondition(DULC_UNKNOWNHOST, OF_error, buf2);
         }
     }
-    server.setPort(OFstatic_cast(unsigned short, htons(port)));
+    server.setPort(OFstatic_cast(unsigned short, htons(OFstatic_cast(unsigned short, port))));
 
     // get global connection timeout
     Sint32 connectTimeout = dcmConnectionTimeout.get();
@@ -2589,7 +2587,7 @@ sendAssociationRQTCP(PRIVATE_NETWORKKEY ** /*network*/,
       }
     }
 
-    destroyPresentationContextList(&associateRequest.presentationContextList);
+    destroyAssociatePDUPresentationContextList(&associateRequest.presentationContextList);
     destroyUserInformationLists(&associateRequest.userInfo);
     if (cond.bad())
         return cond;
@@ -2672,7 +2670,7 @@ sendAssociationACTCP(PRIVATE_NETWORKKEY ** /*network*/,
       }
     }
 
-    destroyPresentationContextList(&associateReply.presentationContextList);
+    destroyAssociatePDUPresentationContextList(&associateReply.presentationContextList);
     destroyUserInformationLists(&associateReply.userInfo);
 
     if (cond.bad()) return cond;
@@ -3977,49 +3975,4 @@ findSCUSCPRole(LST_HEAD ** lst, char *abstractSyntax)
         role = (PRV_SCUSCPROLE*)LST_Next(lst);
     }
     return NULL;
-}
-
-void
-destroyPresentationContextList(LST_HEAD ** l)
-{
-    PRV_PRESENTATIONCONTEXTITEM
-    * prvCtx;
-    DUL_SUBITEM
-        * subItem;
-
-    if (*l == NULL)
-        return;
-
-    prvCtx = (PRV_PRESENTATIONCONTEXTITEM*)LST_Dequeue(l);
-    while (prvCtx != NULL) {
-        subItem = (DUL_SUBITEM*)LST_Dequeue(&prvCtx->transferSyntaxList);
-        while (subItem != NULL) {
-            free(subItem);
-            subItem = (DUL_SUBITEM*)LST_Dequeue(&prvCtx->transferSyntaxList);
-        }
-        LST_Destroy(&prvCtx->transferSyntaxList);
-        free(prvCtx);
-        prvCtx = (PRV_PRESENTATIONCONTEXTITEM*)LST_Dequeue(l);
-    }
-    LST_Destroy(l);
-}
-
-void
-destroyUserInformationLists(DUL_USERINFO * userInfo)
-{
-    PRV_SCUSCPROLE
-    * role;
-
-    role = (PRV_SCUSCPROLE*)LST_Dequeue(&userInfo->SCUSCPRoleList);
-    while (role != NULL) {
-        free(role);
-        role = (PRV_SCUSCPROLE*)LST_Dequeue(&userInfo->SCUSCPRoleList);
-    }
-    LST_Destroy(&userInfo->SCUSCPRoleList);
-
-    /* extended negotiation */
-    delete userInfo->extNegList; userInfo->extNegList = NULL;
-
-    /* user identity negotiation */
-    delete userInfo->usrIdent; userInfo->usrIdent = NULL;
 }

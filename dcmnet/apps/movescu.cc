@@ -174,7 +174,7 @@ addOverrideKey(OFConsoleApplication& app, const char *s)
       if (eqPos != OFString_npos)
         valStr = toParse.substr(eqPos+1,toParse.length());
     }
-    DcmTag tag(g,e);
+    DcmTag tag(OFstatic_cast(Uint16, g), OFstatic_cast(Uint16, e));
     if (tag.error() != EC_Normal) {
         sprintf(msg2, "unknown tag: (%04x,%04x)", g, e);
         app.printError(msg2);
@@ -216,7 +216,7 @@ int
 main(int argc, char *argv[])
 {
   T_ASC_Parameters *params = NULL;
-  const char *opt_peer;
+  const char *opt_peer = NULL;
   OFCmdUnsignedInt opt_port = 104;
   DIC_NODENAME peerHost;
   T_ASC_Association *assoc = NULL;

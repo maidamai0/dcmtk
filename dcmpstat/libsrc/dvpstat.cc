@@ -1080,7 +1080,8 @@ OFCondition DVPresentationState::setGammaVOILUT(double gammaValue, DVPSObjectApp
   signed long firstMapped = 0;
   if (haveActiveVOIWindow())    // use active VOI window to specify the LUT descriptor
   {
-    double ww, wc;
+    double ww = 0.0;
+    double wc = 0.0;
     if ((getCurrentWindowWidth(ww) == EC_Normal) && (getCurrentWindowCenter(wc) == EC_Normal))
     {
       if (ww <= 65536)
@@ -1546,8 +1547,8 @@ void DVPresentationState::renderPixelData(OFBool display)
     /* remove all external overlays that are not active as overlay or bitmap shutter */
     for (unsigned int remgroup=0x6000; remgroup <= 0x601F; remgroup += 2)
     {
-      if ((remgroup != bitmapShutterGroup)&&((! overlayList.haveOverlayGroup(remgroup))||
-          (NULL == activationLayerList.getActivationLayer(remgroup))))
+      if ((remgroup != bitmapShutterGroup)&&((! overlayList.haveOverlayGroup(OFstatic_cast(Uint16, remgroup)))||
+          (NULL == activationLayerList.getActivationLayer(OFstatic_cast(Uint16, remgroup)))))
       {
          currentImage->removeOverlay(remgroup); // ignore return value.
       }

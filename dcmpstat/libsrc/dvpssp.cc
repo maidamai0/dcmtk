@@ -1381,8 +1381,15 @@ OFCondition DVPSStoredPrint::addPresentationLUTReference(DcmItem& dset)
   DcmElement *delem=NULL;
   OFCondition result = EC_Normal;
 
-  ADD_TO_DATASET(DcmUnsignedShort, illumination)
-  ADD_TO_DATASET(DcmUnsignedShort, reflectedAmbientLight)
+  if (illumination.getLength() > 0)
+  {
+    ADD_TO_DATASET(DcmUnsignedShort, illumination)
+  }
+
+  if (reflectedAmbientLight.getLength() > 0)
+  {
+    ADD_TO_DATASET(DcmUnsignedShort, reflectedAmbientLight)
+  }
 
   if (presentationLUTInstanceUID.size() > 0)
   {
@@ -1428,6 +1435,12 @@ OFCondition DVPSStoredPrint::printSCUcreateBasicFilmSession(
   // we expect 'number of copies', 'print priority', 'medium type' and 'film destination' in dset
   // add illumination and reflection, and presentation LUT reference if necessary.
   if ((printHandler.printerSupportsPresentationLUT()) && plutInSession) result = addPresentationLUTReference(dset);
+
+  if (result.good() && (specificCharacterSet.getLength() > 0))
+  {
+    DcmElement *delem=NULL;
+    ADD_TO_DATASET(DcmCodeString, specificCharacterSet)
+  }
 
   if (result==EC_Normal)
   {

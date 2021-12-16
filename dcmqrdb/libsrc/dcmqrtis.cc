@@ -589,14 +589,14 @@ OFCondition DcmQueryRetrieveTelnetInitiator::addPresentationContexts(T_ASC_Param
     /* first add presentation contexts for find and verification */
     for (i=0; i<(int)DIM_OF(abstractSyntaxes) && cond.good(); i++)
     {
-        cond = ASC_addPresentationContext( params, pid, abstractSyntaxes[i], transferSyntaxes, numTransferSyntaxes);
+        cond = ASC_addPresentationContext( params, OFstatic_cast(T_ASC_PresentationContextID, pid), abstractSyntaxes[i], transferSyntaxes, numTransferSyntaxes);
         pid += 2; /* only odd presentation context id's */
     }
 
     /* and then for all storage SOP classes */
     for (i=0; i<numberOfDcmLongSCUStorageSOPClassUIDs && cond.good(); i++)
     {
-      cond = ASC_addPresentationContext( params, pid, dcmLongSCUStorageSOPClassUIDs[i], transferSyntaxes, numTransferSyntaxes);
+      cond = ASC_addPresentationContext( params, OFstatic_cast(T_ASC_PresentationContextID, pid), dcmLongSCUStorageSOPClassUIDs[i], transferSyntaxes, numTransferSyntaxes);
       pid += 2;/* only odd presentation context id's */
     }
 
@@ -1115,7 +1115,6 @@ OFBool DcmQueryRetrieveTelnetInitiator::TI_quit(int arg, const char * /*cmdbuf*/
     TI_detachAssociation(OFFalse);
     printf("Good Bye, Auf Wiedersehen, Au Revoir\n");
     exit(0);
-    return OFTrue;
 }
 
 OFBool DcmQueryRetrieveTelnetInitiator::TI_actualizeStudies()

@@ -118,6 +118,7 @@
 #include "dcmtk/ofstd/ofconsol.h"
 #include "dcmtk/ofstd/ofstd.h"
 #include "dcmtk/dcmnet/dcmtrans.h"
+#include "dcmtk/dcmnet/helpers.h"
 
 /*
 ** Constant Definitions
@@ -336,36 +337,17 @@ ASC_createAssociationParameters(T_ASC_Parameters ** params,
     return EC_Normal;
 }
 
-static void
-destroyPresentationContextList(LST_HEAD ** lst)
-{
-    DUL_PRESENTATIONCONTEXT *pc;
-    DUL_TRANSFERSYNTAX *ts;
-
-    if ((lst == NULL) || (*lst == NULL))
-        return;
-    while ((pc = (DUL_PRESENTATIONCONTEXT*) LST_Dequeue(lst)) != NULL) {
-        if (pc->proposedTransferSyntax != NULL) {
-            while ((ts = (DUL_TRANSFERSYNTAX*) LST_Dequeue(&pc->proposedTransferSyntax)) != NULL) {
-                free(ts);
-            }
-            LST_Destroy(&pc->proposedTransferSyntax);
-        }
-        free(pc);
-    }
-    LST_Destroy(lst);
-}
 
 OFCondition
 ASC_destroyAssociationParameters(T_ASC_Parameters ** params)
 {
 
     /* free the elements in the requested presentation context list */
-    destroyPresentationContextList(
+    destroyDULParamPresentationContextList(
         &((*params)->DULparams.requestedPresentationContext));
 
     /* free the elements in the accepted presentation context list */
-    destroyPresentationContextList(
+    destroyDULParamPresentationContextList(
         &((*params)->DULparams.acceptedPresentationContext));
 
     /* free DUL parameters */
@@ -797,7 +779,7 @@ ASC_getPresentationContext(T_ASC_Parameters * params,
         transfer = (DUL_TRANSFERSYNTAX*) LST_Next(l);
     }
 
-    presentationContext->transferSyntaxCount = count;
+    presentationContext->transferSyntaxCount = OFstatic_cast(unsigned char, count);
 
     return EC_Normal;
 }
@@ -904,7 +886,7 @@ ASC_refusePresentationContext(
     if (proposedContext == NULL) return ASC_BADPRESENTATIONCONTEXTID;
 
     /* we want to mark this proposed context as being refused */
-    proposedContext->result = resultReason;
+    proposedContext->result = OFstatic_cast(unsigned char, resultReason);
 
     acceptedContext = findPresentationContextID(
                               params->DULparams.acceptedPresentationContext,
@@ -912,7 +894,7 @@ ASC_refusePresentationContext(
 
     if (acceptedContext != NULL) {
         /* it is already in the list, mark it as refused */
-        acceptedContext->result = resultReason;
+        acceptedContext->result = OFstatic_cast(unsigned char, resultReason);
         OFStandard::strlcpy(acceptedContext->abstractSyntax,
                proposedContext->abstractSyntax, sizeof(acceptedContext->abstractSyntax));
         /* we must send back a transfer syntax even though this
@@ -936,7 +918,7 @@ ASC_refusePresentationContext(
         cond = DUL_MakePresentationCtx(
             &acceptedContext,
             DUL_SC_ROLE_DEFAULT, DUL_SC_ROLE_DEFAULT,
-            presentationContextID, resultReason,
+            presentationContextID, OFstatic_cast(unsigned char, resultReason),
             proposedContext->abstractSyntax,
             UID_LittleEndianImplicitTransferSyntax, NULL);
         if (cond.bad()) return cond;
@@ -995,7 +977,7 @@ ASC_findAcceptedPresentationContext(
     presentationContext->proposedRole = dulRole2ascRole(pc->proposedSCRole);
     presentationContext->acceptedRole = dulRole2ascRole(pc->acceptedSCRole);
 
-    presentationContext->transferSyntaxCount = count;
+    presentationContext->transferSyntaxCount = OFstatic_cast(unsigned char, count);
     OFStandard::strlcpy(presentationContext->acceptedTransferSyntax, pc->acceptedTransferSyntax, sizeof(DIC_UI));
 
     return EC_Normal;
@@ -1699,8 +1681,7 @@ ASC_destroyAssociation(T_ASC_Association ** association)
     }
 
     if ((*association)->params != NULL) {
-        cond = ASC_destroyAssociationParameters(&(*association)->params);
-        if (cond.bad()) return cond;
+        ASC_destroyAssociationParameters(&(*association)->params);
     }
 
     if ((*association)->sendPDVBuffer != NULL)
@@ -2217,4 +2198,24 @@ ASC_dumpConnectionParameters(T_ASC_Association *association, STD_NAMESPACE ostre
     OFString str;
     ASC_dumpConnectionParameters(str, association);
     outstream << str << OFendl;
+}
+
+void
+destroyDULParamPresentationContextList(LST_HEAD ** lst)
+{
+    DUL_PRESENTATIONCONTEXT *pc;
+    DUL_TRANSFERSYNTAX *ts;
+
+    if ((lst == NULL) || (*lst == NULL))
+        return;
+    while ((pc = (DUL_PRESENTATIONCONTEXT*) LST_Dequeue(lst)) != NULL) {
+        if (pc->proposedTransferSyntax != NULL) {
+            while ((ts = (DUL_TRANSFERSYNTAX*) LST_Dequeue(&pc->proposedTransferSyntax)) != NULL) {
+                free(ts);
+            }
+            LST_Destroy(&pc->proposedTransferSyntax);
+        }
+        free(pc);
+    }
+    LST_Destroy(lst);
 }

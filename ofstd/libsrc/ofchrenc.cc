@@ -26,6 +26,7 @@
 #include "dcmtk/ofstd/ofstd.h"
 #include "dcmtk/ofstd/ofdiag.h"
 #include "dcmtk/ofstd/ofconsol.h"
+#include <cerrno>
 
 #ifdef HAVE_WINDOWS_H
 #define WIN32_LEAN_AND_MEAN
@@ -373,8 +374,9 @@ class OFCharacterEncoding::Implementation
         // different encoding flags and only has a (varying) fixed functionality
         // that we detect with a configuration test.
         return flags == DCMTK_FIXED_ICONV_CONVERSION_FLAGS;
-#endif
+#else
         return OFFalse;
+#endif
     }
 
     unsigned getConversionFlags() const
@@ -401,8 +403,9 @@ class OFCharacterEncoding::Implementation
         // different encoding flags and only has a (varying) fixed functionality
         // that we detect with a configuration test.
         return DCMTK_FIXED_ICONV_CONVERSION_FLAGS;
-#endif
+#else
         return 0;
+#endif
     }
 
     OFBool setConversionFlags(const unsigned flags)
@@ -448,8 +451,9 @@ class OFCharacterEncoding::Implementation
         // different encoding flags and only has a (varying) fixed functionality
         // that we detect with a configuration test.
         return flags == DCMTK_FIXED_ICONV_CONVERSION_FLAGS;
-#endif
+#else
         return OFFalse;
+#endif
     }
 
 
@@ -597,14 +601,17 @@ OFString OFCharacterEncoding::getLocaleEncoding()
 }
 
 
+#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
 OFBool OFCharacterEncoding::supportsConversionFlags(const unsigned flags)
 {
-#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
     return Implementation::supportsConversionFlags(flags);
-#else
-    return OFFalse;
-#endif
 }
+#else
+OFBool OFCharacterEncoding::supportsConversionFlags(const unsigned /* flags */)
+{
+    return OFFalse;
+}
+#endif
 
 
 OFCharacterEncoding::OFCharacterEncoding()
@@ -675,9 +682,9 @@ unsigned OFCharacterEncoding::getConversionFlags() const
 }
 
 
+#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
 OFCondition OFCharacterEncoding::setConversionFlags(const unsigned flags)
 {
-#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
     if (TheImplementation)
     {
         if (TheImplementation->setConversionFlags(flags))
@@ -686,42 +693,55 @@ OFCondition OFCharacterEncoding::setConversionFlags(const unsigned flags)
             "Conversion flags not supported by the underlying implementation");
     }
     return EC_NoEncodingSelected;
-#endif
+}
+#else
+OFCondition OFCharacterEncoding::setConversionFlags(const unsigned /* flags */)
+{
     return EC_NoEncodingLibrary;
 }
+#endif
 
 
+#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
 OFCondition OFCharacterEncoding::selectEncoding(const OFString &fromEncoding,
                                                 const OFString &toEncoding)
 {
-#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
     OFCondition result;
     TheImplementation.reset(Implementation::create(fromEncoding, toEncoding, result));
     return result;
-#else
-    return EC_NoEncodingLibrary;
-#endif
 }
+#else
+OFCondition OFCharacterEncoding::selectEncoding(const OFString & /* fromEncoding */,
+                                                const OFString & /* toEncoding */)
+{
+    return EC_NoEncodingLibrary;
+}
+#endif
 
 
+#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
 OFCondition OFCharacterEncoding::convertString(const OFString &fromString,
                                                OFString &toString,
                                                const OFBool clearMode)
 {
-#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
     return convertString(fromString.c_str(), fromString.length(), toString, clearMode);
-#else
-    return EC_NoEncodingLibrary;
-#endif
 }
+#else
+OFCondition OFCharacterEncoding::convertString(const OFString & /* fromString */,
+                                               OFString & /* toString */,
+                                               const OFBool /* clearMode */)
+{
+    return EC_NoEncodingLibrary;
+}
+#endif
 
 
+#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
 OFCondition OFCharacterEncoding::convertString(const char *fromString,
                                                const size_t fromLength,
                                                OFString &toString,
                                                const OFBool clearMode)
 {
-#ifdef DCMTK_ENABLE_CHARSET_CONVERSION
     if (TheImplementation)
     {
         // first, clear result variable if requested
@@ -730,10 +750,16 @@ OFCondition OFCharacterEncoding::convertString(const char *fromString,
         return TheImplementation->convert(toString, fromString, fromLength);
     }
     return EC_NoEncodingSelected;
-#else
-    return EC_NoEncodingLibrary;
-#endif
 }
+#else
+OFCondition OFCharacterEncoding::convertString(const char * /* fromString */,
+                                               const size_t /* fromLength */,
+                                               OFString & /* toString */,
+                                               const OFBool /* clearMode */)
+{
+    return EC_NoEncodingLibrary;
+}
+#endif
 
 
 #ifdef HAVE_WINDOWS_H  // Windows-specific conversion functions
